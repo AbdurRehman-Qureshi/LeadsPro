@@ -1,0 +1,15 @@
+Great question. Right now, it is taking around 30 to 45 seconds per lead because the system is intentionally designed to be highly polite and sequential to avoid getting blocked or crashing your machine.
+
+Here are the exact three bottlenecks:
+
+Crawler Politeness (The biggest bottleneck): For every single website, it visits up to 30 pages (Home, About, Services, Contact, etc.). To avoid triggering Cloudflare or getting your IP banned by these dental clinics, the crawler has a request_delay=1.0 second sleep between every single page load. (30 pages = 30 seconds of pure waiting per lead).
+AI Processing Time: gpt-4o-mini takes about 3-5 seconds to read the 15,000 characters of scraped text and generate the JSON profile.
+Sequential Batching: Right now, the batch runner processes one business at a time. It finishes Lead 1 completely before it even looks at Lead 2.
+How we can make it 10x faster (If you want):
+If speed is more important than being polite, I can modify the code right now to introduce Concurrency:
+
+Concurrent Crawling: Instead of waiting 1 second between pages, I can change crawler.py to fetch 5 or 10 pages simultaneously using asyncio.gather.
+Concurrent Batching: I can change batch_intelligence_runner.py to analyze 5 different websites at the exact same time.
+By doing this, we could drop the time from 30 minutes down to under 5 minutes.
+
+Would you like me to rewrite those two files to enable high-speed concurrent scraping, or do you prefer to keep it safe and sequential?

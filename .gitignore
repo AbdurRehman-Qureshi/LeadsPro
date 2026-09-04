@@ -1,0 +1,27 @@
+# Virtual Environments
+venv/
+env/
+.venv/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment Variables
+.env
+.env.*
+
+# Local Databases & Logs
+*.db
+*.db-journal
+*.sqlite3
+*.log
+
+# Project specific
+advertiser_intelligence_leads.csv
+
+# IDEs
+.vscode/
+.idea/
+*.swp

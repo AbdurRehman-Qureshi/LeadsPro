@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-py"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("SUPABASE_DATABASE_URL")
+  directUrl = env("SUPABASE_DIRECT_URL")
+}
+
+/// Represents the master record of a lead, combining all 3 data sources.
+model BusinessLead {
+  id                   String   @id @default(uuid())
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // ==========================================
+  // SOURCE 1: GOOGLE MAPS DISCOVERY & SCRAPER
+  // ==========================================
+  placeId              String?  @unique
+  searchJobId          String?  // Traces back to the batch search run
+  
+  rawName              String
+  normalizedName       String
+  primaryCategory      String?
+  
+  rawAddress           String?
+  normalizedAddress    String?
+  city                 String?
+  area                 String?
+  country              String?
+  
+  phone                String?  // Normalized phone
+  rawPhone             String?
+  website              String?
+  
+  googleRating         Float?
+  reviewCount          Int?
+  googleMapsUrl        String?
+  latitude             Float?
+  longitude            Float?
+  businessStatus       String?  // e.g., "Open", "Permanently closed"
+
+  discoveryQuery       String?
+  searchLocation       String?
+  source               String   @default("Google Maps")
+  discoveryTimestamp   DateTime @default(now())
+
+  // ==========================================
+  // SOURCE 2: WEBSITE SCRAPER & INTELLIGENCE
+  // ==========================================
+  crawlStatus          String   @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED
+  pagesCrawled         Int      @default(0)
+  importantPages       String[] // URLs of highly relevant pages found
+  crawlErrors          Json?    // Stores array of error objects if it fails
+  processedAt          DateTime?
+  
+  emails               Json?    // Stores List[Dict] with email, type, source
+  alternativePhones    Json?    // Stores List[Dict] with phone, source
+  
+  socialFacebook       String?
+  socialInstagram      String?
+  socialLinkedin       String?
+  socialX              String?
+  socialYoutube        String?
+  socialTiktok         String?
+
+  // ==========================================
+  // SOURCE 3: AI ANALYSIS (GPT-4o-mini)
+  // ==========================================
+  aiCompanyName        String?
+  aiIndustry           String?
+  aiDescription        String?
+  
+  aiLocations          String[]
+  aiBranches           String[] // Specific branch mentions
+  aiServices           String[]
+  aiProducts           String[]
+  aiProjects           String[]
+  
+  // AI Lead Scoring & Opportunity
+  leadScore            Int      @default(0)
+  leadGrade            String?  // HOT, HIGH, MEDIUM, LOW, REJECT
+  dataQualityScore     Int      @default(0)
+  
+  advRelevant          Boolean  @default(false)
+  advReason            String?
+  advCampaignAngle     String?
+  advUrgency           String?  // HIGH, MEDIUM, LOW
+
+  // Relationships
+  buyingSignals        BuyingSignal[]
+
+  // ==========================================
+  // INDEXES FOR HIGH-PERFORMANCE READS
+  // ==========================================
+  @@index([leadScore(sort: Desc)]) // Fast sorting by best leads
+  @@index([crawlStatus])           // Fast filtering for background workers
+  @@index([advRelevant])           // Fast filtering for the dashboard
+  @@index([searchJobId])           // Fast grouping by specific search jobs
+  @@index([source])
+}
+
+/// Represents deterministic and AI-generated buying signals for a business.
+model BuyingSignal {
+  id              String   @id @default(uuid())
+  businessId      String
+  business        BusinessLead @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  
+  type            String   // e.g., NEW_BRANCH, PROJECT_LAUNCH, EVENT
+  strength        Int      // 0-100
+  confidence      Float    // 0.0-1.0
+  description     String?
+  evidence        String?  // Exact quote from the website
+  sourceUrl       String?  // The specific page URL where this was found
+  date            String?  // YYYY-MM-DD
+  freshness       String?  // VERY_FRESH, FRESH, RECENT, OLD, EXPIRED
+  
+  createdAt       DateTime @default(now())
+
+  @@index([businessId]) // Critical for fast join queries
+  @@index([type])       // Fast filtering by specific signal types
+}
